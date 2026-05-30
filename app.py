@@ -3,6 +3,7 @@
 
 import re
 import os
+import time
 import requests
 from difflib import get_close_matches
 
@@ -35,10 +36,12 @@ def ensure_file(local_path, secret_key, force_download=False):
         st.error(f"Dosya bulunamadı: {local_path}")
         st.stop()
     url = st.secrets["data_urls"][secret_key]
+    sep = "&" if "?" in url else "?"
+    url = f"{url}{sep}_={int(time.time())}"
     os.makedirs(os.path.dirname(local_path), exist_ok=True)
     with st.spinner(f"Veri indiriliyor: {local_path}..."):
         try:
-            r = requests.get(url)
+            r = requests.get(url, timeout=60)
             r.raise_for_status()
             with open(local_path, "wb") as f:
                 f.write(r.content)
@@ -181,10 +184,10 @@ def main():
         st.stop()
     st.title("Adana & Mersin Mahalle Kırılganlık Paneli")
 
-    with st.sidebar.expander("Veri Yönetimi", expanded=False):
-        force_update = st.button("Verileri İnternetten Güncelle")
-        if force_update:
-            st.cache_data.clear()
+    force_update = st.sidebar.button("🔄 Verileri Güncelle (Drive'dan İndir)")
+    if force_update:
+        st.cache_data.clear()
+        st.rerun()
 
     xlsx_main_path = ensure_file(XLSX_MAIN, "main_excel", force_download=force_update)
     xlsx_sub_path = ensure_file(XLSX_SUB, "sub_excel", force_download=force_update)
